@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f1115">
+<title>🎭 홍심영범의 라이어게임</title>
+<!-- PWA -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="홍심영범의 라이어게임">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --accent: #ff5470;
+    --accent2: #4fc3f7;
+    --ok: #36d399;
+    --text: #f5f6fa;
+    --muted: #8b93a7;
+  }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    overflow: hidden;
+    user-select: none;
+  }
+  .screen {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    padding: 22px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    animation: fade .25s ease;
+  }
+  .screen.active { display: flex; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  h1 { font-size: 26px; margin: 4px 0 2px; }
+  .sub { color: var(--muted); font-size: 14px; margin-bottom: 6px; }
+  .credit { color: var(--muted); font-size: 12px; margin-bottom: 16px; opacity: .85; }
+
+  /* setup */
+  .label { font-size: 15px; color: var(--muted); margin: 18px 0 8px; }
+  .chips { display: flex; gap: 10px; flex-wrap: wrap; }
+  .chip {
+    flex: 1; min-width: 56px; text-align: center;
+    background: var(--card); border: 2px solid transparent;
+    padding: 16px 0; border-radius: 14px; font-size: 22px; font-weight: 700;
+    cursor: pointer; transition: .15s;
+  }
+  .chip.sel { border-color: var(--accent); color: var(--accent); }
+  .chip.sm { font-size: 15px; padding: 13px 6px; min-width: 70px; flex: 1 0 auto; }
+  .chip.mode { font-size: 16px; }
+  .modedesc { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.5; min-height: 34px; }
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--card); padding: 16px 18px; border-radius: 14px; margin-top: 10px;
+  }
+  .toggle-row .t { font-size: 16px; }
+  .toggle-row .d { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .switch { width: 56px; height: 32px; border-radius: 16px; background: #333; position: relative; transition: .2s; flex: 0 0 auto; }
+  .switch.on { background: var(--ok); }
+  .switch::after { content:""; position:absolute; top:3px; left:3px; width:26px; height:26px; border-radius:50%; background:#fff; transition:.2s; }
+  .switch.on::after { left: 27px; }
+
+  .spacer { flex: 1; }
+
+  button.big {
+    width: 100%; padding: 22px; font-size: 22px; font-weight: 800;
+    border: none; border-radius: 18px; color: #fff; cursor: pointer;
+    background: var(--accent); transition: transform .1s, filter .15s;
+  }
+  button.big:active { transform: scale(.97); }
+  button.big.blue { background: var(--accent2); }
+  button.big.green { background: var(--ok); }
+  button.big.ghost { background: var(--card); color: var(--text); }
+  button.big[disabled] { opacity: .4; }
+
+  /* distribution */
+  .pnum {
+    font-size: 96px; font-weight: 900; text-align: center;
+    line-height: 1; margin: 10px 0; color: var(--accent2);
+  }
+  .pnum small { display:block; font-size: 22px; color: var(--muted); font-weight: 600; margin-top: 8px; }
+  .instr {
+    text-align: center; font-size: 19px; color: var(--text);
+    background: var(--card); padding: 18px; border-radius: 14px; line-height: 1.5;
+  }
+  .instr .em { color: var(--accent); font-weight: 800; }
+  .dots { display:flex; gap:8px; justify-content:center; margin: 18px 0; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: #333; }
+  .dot.done { background: var(--ok); }
+  .dot.cur { background: var(--accent2); transform: scale(1.3); }
+
+  .center { display:flex; flex-direction:column; justify-content:center; flex:1; gap: 14px; }
+  .reveal-word { text-align:center; }
+  .reveal-word .k { font-size: 14px; color: var(--muted); }
+  .reveal-word .v { font-size: 30px; font-weight: 800; margin-top: 4px; }
+  .liar-name { text-align:center; font-size: 40px; font-weight: 900; color: var(--accent); margin: 6px 0; }
+
+  .warn { background:#3a2a00; color:#ffd479; padding:12px; border-radius:12px; font-size:13px; margin-top:12px; display:none; }
+  .footnote { color: var(--muted); font-size: 12px; text-align:center; margin-top: 14px; line-height:1.5; }
+  .resetbtn { background:none; border:none; color:var(--muted); font-size:14px; padding:10px; margin-top:6px; cursor:pointer; width:100%; text-decoration:underline; }
+</style>
+</head>
+<body>
+
+<!-- 1. 설정 -->
+<section id="setup" class="screen active">
+  <h1>🎭 홍심영범의 라이어게임</h1>
+  <div class="sub">폰 하나로 돌려가며 — 각자 귀로 제시어를 듣습니다</div>
+  <div class="credit">제작자 : 마이산홍어</div>
+
+  <div class="label">제시어 주제</div>
+  <div class="chips" id="catChips"></div>
+
+  <div class="label">참가 인원</div>
+  <div class="chips" id="countChips"></div>
+
+  <div class="label">라이어 수</div>
+  <div class="chips" id="liarChips"></div>
+
+  <div class="label">모드</div>
+  <div class="chips" id="modeChips">
+    <div class="chip mode" data-mode="liar">🤐 라이어 모드</div>
+    <div class="chip mode" data-mode="bluff">🎭 블러핑 모드</div>
+  </div>
+  <div class="modedesc" id="modeDesc"></div>
+
+  <div class="spacer"></div>
+  <div id="ttsWarn" class="warn">⚠️ 이 브라우저는 음성 기능을 지원하지 않을 수 있어요. Chrome 또는 Safari를 권장합니다.</div>
+  <button class="big" onclick="startGame()">게임 시작 ▶</button>
+  <div class="footnote">📢 폰 음량을 적당히 낮추고, 들을 때 <b>귀에 대고</b> 들으세요.<br>🍎 <b>아이폰</b>은 측면 <b>무음(벨소리) 스위치를 꺼야</b> 소리가 납니다.</div>
+</section>
+
+<!-- 2. 분배 -->
+<section id="distribute" class="screen">
+  <div class="dots" id="dots"></div>
+  <div class="pnum" id="pnum">1<small>번 플레이어</small></div>
+  <div class="instr" id="distInstr">
+    📱 폰을 <span class="em">귀에 대고</span><br>아래 버튼을 눌러 제시어를 들으세요
+  </div>
+  <div class="spacer"></div>
+  <button class="big blue" id="hearBtn" onclick="hearWord()">🔊 내 제시어 듣기</button>
+  <div style="height:12px"></div>
+  <button class="big ghost" id="passBtn" onclick="nextPlayer()" disabled>다음 사람에게 전달 ▶</button>
+  <div class="footnote" id="distFoot">먼저 ‘듣기’를 눌러 확인하세요</div>
+  <button class="resetbtn" onclick="toSetup()">⟲ 처음으로 (새 게임 설정)</button>
+</section>
+
+<!-- 3. 토론 -->
+<section id="discuss" class="screen">
+  <h1>🗣️ 토론</h1>
+  <div class="sub">1번부터 한 마디씩 설명하세요</div>
+  <div class="center">
+    <div class="instr">
+      이번 주제는<br><span class="em" id="catBig" style="font-size:30px">음식</span>
+    </div>
+    <button class="big blue" onclick="announceTurn()">🔊 주제 다시 듣기</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="big green" onclick="goReveal()">✅ 정답 공개 (라이어는?) ▶</button>
+  <div class="footnote">충분히 토론하고 투표한 뒤 눌러주세요</div>
+  <button class="resetbtn" onclick="toSetup()">⟲ 처음으로 (새 게임 설정)</button>
+</section>
+
+<!-- 4. 결과 -->
+<section id="reveal" class="screen">
+  <h1>🕵️ 결과</h1>
+  <div class="center">
+    <div class="liar-name" id="liarName">3번 플레이어</div>
+    <div class="instr"><span class="em">라이어</span> 공개</div>
+    <div class="reveal-word"><div class="k" id="cwLabel">제시어</div><div class="v" id="cw">사과</div></div>
+    <div class="reveal-word" id="lwRow"><div class="k">라이어 제시어</div><div class="v" id="lw" style="color:var(--accent)">바나나</div></div>
+    <button class="big blue" onclick="announceReveal()">🔊 결과 다시 듣기</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="big" onclick="toSetup()">⚙️ 처음으로 (새 게임 설정)</button>
+</section>
+
+<script>
+/* ---------- 제시어 데이터 (같은 주제 안에서 두 단어를 뽑음) ---------- */
+const CATEGORIES = {
+  "음식":    ["김치","피자","치킨","햄버거","라면","초밥","떡볶이","삼겹살","짜장면","김밥","돈까스","비빔밥"],
+  "동물":    ["강아지","고양이","호랑이","코끼리","기린","펭귄","사자","토끼","원숭이","곰","여우","악어"],
+  "과일":    ["사과","바나나","딸기","포도","수박","오렌지","복숭아","파인애플","키위","망고","체리","멜론"],
+  "직업":    ["의사","경찰","교사","요리사","가수","소방관","변호사","간호사","파일럿","농부","배우","기자"],
+  "장소":    ["학교","병원","공항","해변","도서관","영화관","놀이공원","카페","시장","박물관","수영장","호텔"],
+  "스포츠":  ["축구","농구","야구","수영","테니스","골프","배드민턴","탁구","스키","복싱","마라톤","볼링"],
+  "교통수단":["자동차","버스","지하철","비행기","자전거","배","오토바이","기차","택시","트럭","헬리콥터","트램"],
+  "계절/날씨":["봄","여름","가을","겨울","비","눈","태풍","무지개","안개","번개","황사","장마"],
+  "물건":    ["우산","가위","칫솔","리모컨","지갑","안경","베개","컵","열쇠","시계","숟가락","거울"],
+  "사람":    ["엄마","아빠","선생님","의사","경찰관","가수","축구선수","대통령","아기","친구","소방관","요리사"]
+};
+const CAT_NAMES = Object.keys(CATEGORIES);
+
+/* ---------- 상태 ---------- */
+let state = {
+  players: 4,
+  liarCount: 1,
+  mode: 'liar',        // 'liar' = 라이어 모드, 'bluff' = 블러핑 모드
+  category: "",        // "" = 랜덤, 그 외 = 선택한 주제
+  roundCat: "",        // 이번 판 실제 주제 (랜덤이면 여기 채워짐)
+  citizenWord: "",
+  liarWord: "",
+  liarIndexes: [],     // 0-based 라이어 목록
+  current: 0           // 0-based, 분배 중 현재 플레이어
+};
+
+/* ---------- 화면 전환 ---------- */
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ---------- 음성(TTS) ---------- */
+// 숫자를 한자어 발음으로 (TTS가 "1번"을 "한 번"으로 읽는 문제 방지)
+const SINO = ['','일','이','삼','사','오','육','칠','팔','구','십'];
+function spokenNum(n){ return SINO[n] || String(n); }
+function spokenLiarNames(){
+  return state.liarIndexes.map(i => spokenNum(i+1)).join('번, ') + '번 플레이어';
+}
+let koVoice = null;
+let ttsUnlocked = false;
+function loadVoices(){
+  const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+  koVoice = vs.find(v=>v.lang && v.lang.toLowerCase().startsWith('ko')) || null;
+}
+if (window.speechSynthesis){
+  loadVoices();
+  speechSynthesis.onvoiceschanged = loadVoices;
+  // iOS Safari: 첫 사용자 터치에서 음성 엔진을 "잠금 해제"해야 이후 재생됨
+  function unlockTTS(){
+    if(ttsUnlocked) return;
+    ttsUnlocked = true;
+    try {
+      const u = new SpeechSynthesisUtterance('');
+      u.volume = 0; u.lang = 'ko-KR';
+      speechSynthesis.speak(u);
+    } catch(e){}
+  }
+  document.addEventListener('touchend', unlockTTS, { once:true, passive:true });
+  document.addEventListener('click', unlockTTS, { once:true });
+} else {
+  document.getElementById('ttsWarn').style.display = 'block';
+}
+function speak(text, onend){
+  if(!window.speechSynthesis){ if(onend) onend(); return; }
+  const synth = window.speechSynthesis;
+  // 이전 음성 정리
+  try { synth.cancel(); } catch(e){}
+  // 보이스가 늦게 로드되는 iOS 대비: 매번 재선택 시도
+  if(!koVoice) loadVoices();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ko-KR';
+  if(koVoice) u.voice = koVoice;
+  u.rate = 1.0; u.pitch = 1.0; u.volume = 1.0;
+  if(onend) u.onend = onend;
+  synth.speak(u);
+  // iOS Safari가 가끔 일시정지 상태로 멈추는 버그 방지
+  setTimeout(()=>{ try { synth.resume(); } catch(e){} }, 80);
+}
+
+/* ---------- 설정 화면 구성 ---------- */
+// 주제 선택 (🎲 랜덤 + 각 주제)
+const catChips = document.getElementById('catChips');
+[{label:'🎲 랜덤', val:''}].concat(CAT_NAMES.map(c=>({label:c, val:c}))).forEach(o=>{
+  const c = document.createElement('div');
+  c.className = 'chip sm' + (o.val===state.category?' sel':'');
+  c.textContent = o.label;
+  c.onclick = ()=>{
+    state.category = o.val;
+    [...catChips.children].forEach(x=>x.classList.remove('sel'));
+    c.classList.add('sel');
+  };
+  catChips.appendChild(c);
+});
+
+// 참가 인원
+const countChips = document.getElementById('countChips');
+[3,4,5,6,7,8].forEach(n=>{
+  const c = document.createElement('div');
+  c.className = 'chip' + (n===state.players?' sel':'');
+  c.textContent = n;
+  c.onclick = ()=>{
+    state.players = n;
+    [...countChips.children].forEach(x=>x.classList.remove('sel'));
+    c.classList.add('sel');
+    buildLiarChips();   // 인원 바뀌면 라이어 수 범위 갱신
+  };
+  countChips.appendChild(c);
+});
+
+// 라이어 수 (1 ~ 인원의 절반, 시민이 항상 다수가 되도록)
+const liarChips = document.getElementById('liarChips');
+function buildLiarChips(){
+  const max = Math.max(1, Math.floor(state.players/2));
+  if(state.liarCount > max) state.liarCount = max;
+  liarChips.innerHTML = '';
+  for(let n=1; n<=max; n++){
+    const c = document.createElement('div');
+    c.className = 'chip' + (n===state.liarCount?' sel':'');
+    c.textContent = n;
+    c.onclick = ()=>{
+      state.liarCount = n;
+      [...liarChips.children].forEach(x=>x.classList.remove('sel'));
+      c.classList.add('sel');
+    };
+    liarChips.appendChild(c);
+  }
+}
+buildLiarChips();
+
+// 모드 선택
+const modeChips = document.getElementById('modeChips');
+const modeDesc = document.getElementById('modeDesc');
+const MODE_INFO = {
+  liar:  '라이어에게 제시어 없이 “당신은 라이어입니다”라고만 알립니다. 라이어가 여럿이면 서로 누가 동료인지 알려줍니다.',
+  bluff: '라이어에게 시민과 다른 제시어를 알려줍니다(블러핑). 라이어끼리도 서로 누군지 모릅니다.'
+};
+function buildModeChips(){
+  modeChips.querySelectorAll('.chip').forEach(c=>{
+    c.classList.toggle('sel', c.dataset.mode===state.mode);
+    c.onclick = ()=>{ state.mode = c.dataset.mode; buildModeChips(); };
+  });
+  modeDesc.textContent = MODE_INFO[state.mode];
+}
+buildModeChips();
+
+/* ---------- 이미 나온 제시어 (다음 게임에서 제외) ---------- */
+let usedWords = new Set();
+
+function pickWords(){
+  let cat;
+  if(state.category){
+    // 사용자가 주제를 골랐으면 그 안에서만
+    cat = state.category;
+    let pool = CATEGORIES[cat].filter(w => !usedWords.has(w));
+    if(pool.length < 2){
+      // 해당 주제 단어 소진 → 그 주제 기록만 초기화
+      CATEGORIES[cat].forEach(w => usedWords.delete(w));
+    }
+  } else {
+    // 랜덤: 안 쓴 단어가 2개 이상 남은 주제만 후보
+    let avail = CAT_NAMES.filter(c =>
+      CATEGORIES[c].filter(w => !usedWords.has(w)).length >= 2
+    );
+    if(avail.length === 0){ usedWords.clear(); avail = CAT_NAMES.slice(); }
+    cat = avail[Math.floor(Math.random()*avail.length)];
+  }
+  const pool = CATEGORIES[cat].filter(w => !usedWords.has(w));
+  // 남은 단어 중 서로 다른 두 개
+  const i = Math.floor(Math.random()*pool.length);
+  let j = Math.floor(Math.random()*pool.length);
+  while(j===i) j = Math.floor(Math.random()*pool.length);
+  state.roundCat = cat;
+  state.citizenWord = pool[i];
+  state.liarWord = pool[j];
+  usedWords.add(pool[i]);
+  usedWords.add(pool[j]);
+}
+
+// 라이어 지정 (서로 다른 liarCount명)
+function pickLiars(){
+  const idx = [...Array(state.players).keys()];
+  for(let k=idx.length-1; k>0; k--){
+    const r = Math.floor(Math.random()*(k+1));
+    [idx[k], idx[r]] = [idx[r], idx[k]];
+  }
+  state.liarIndexes = idx.slice(0, state.liarCount).sort((a,b)=>a-b);
+}
+
+/* ---------- 게임 시작: 주제/단어/라이어 선정 ---------- */
+function startGame(){
+  pickWords();   // 주제·단어 (이미 나온 단어 제외)
+  pickLiars();   // 라이어 지정
+  state.current = 0;
+
+  buildDots();
+  renderPlayer();
+  show('distribute');
+  // iOS 음성 워밍업 (사용자 제스처 안에서 호출됨)
+  speak(' ');
+}
+
+/* ---------- 분배 화면 ---------- */
+function buildDots(){
+  const d = document.getElementById('dots');
+  d.innerHTML = '';
+  for(let k=0;k<state.players;k++){
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    d.appendChild(dot);
+  }
+}
+function renderPlayer(){
+  const n = state.current + 1;
+  document.getElementById('pnum').innerHTML = n + '<small>번 플레이어</small>';
+  document.getElementById('passBtn').disabled = true;
+  document.getElementById('hearBtn').textContent = "🔊 내 제시어 듣기";
+  document.getElementById('distFoot').textContent = "먼저 ‘듣기’를 눌러 확인하세요";
+  // dots
+  const dots = document.querySelectorAll('#dots .dot');
+  dots.forEach((dot,idx)=>{
+    dot.classList.remove('done','cur');
+    if(idx < state.current) dot.classList.add('done');
+    else if(idx === state.current) dot.classList.add('cur');
+  });
+}
+function hearWord(){
+  const isLiar = state.liarIndexes.includes(state.current);
+  let text;
+  if(isLiar){
+    if(state.mode === 'bluff'){
+      // 블러핑 모드: 다른 제시어를 알려줌 (동료 정보 없음)
+      text = `당신의 제시어는, ${state.liarWord}. 다시 말합니다. ${state.liarWord} 입니다.`;
+    } else {
+      // 라이어 모드: 제시어 없이 라이어임을 알림 + 동료 라이어 안내
+      text = '당신은 라이어입니다.';
+      const mates = state.liarIndexes.filter(i => i !== state.current).map(i => i+1);
+      if(mates.length){
+        text += ` 당신의 동료 라이어는 ${mates.map(spokenNum).join('번, ')}번입니다.`;
+      } else {
+        text += ' 들키지 마세요.';
+      }
+    }
+  } else {
+    text = `당신의 제시어는, ${state.citizenWord}. 다시 말합니다. ${state.citizenWord} 입니다.`;
+  }
+  speak(text, markListened);
+  // 음성이 막혀도 진행 가능하도록 1.2초 후 전달/다시듣기 활성화
+  setTimeout(markListened, 1200);
+}
+// 들은 직후: 다시 듣기 가능 + 전달 버튼 활성화 (전달하면 더는 못 들음)
+function markListened(){
+  document.getElementById('passBtn').disabled = false;
+  document.getElementById('hearBtn').textContent = "🔁 다시 듣기";
+  document.getElementById('distFoot').textContent = "다시 들으려면 ‘다시 듣기’, 끝났으면 전달하세요";
+}
+function nextPlayer(){
+  speechSynthesis && speechSynthesis.cancel();
+  state.current++;
+  if(state.current >= state.players){
+    goDiscuss();
+  } else {
+    renderPlayer();
+    // 다음 사람 번호만 공개적으로 안내 (단어는 안 읽음)
+    speak(`${spokenNum(state.current+1)}번 플레이어, 폰을 받으세요.`);
+  }
+}
+
+/* ---------- 토론 화면 ---------- */
+function goDiscuss(){
+  document.getElementById('catBig').textContent = state.roundCat;
+  show('discuss');
+  announceTurn();
+}
+function announceTurn(){
+  speak(`모두 확인했습니다. 이번 주제는, ${state.roundCat}. 일번 플레이어부터 한 마디씩 설명하세요.`);
+}
+
+/* ---------- 결과 화면 ---------- */
+function liarNames(){
+  return state.liarIndexes.map(i => i+1).join('번, ') + '번 플레이어';
+}
+function goReveal(){
+  document.getElementById('liarName').textContent = liarNames();
+  document.getElementById('cw').textContent = state.citizenWord;
+  if(state.mode === 'bluff'){
+    // 블러핑 모드: 시민/라이어 제시어 둘 다 공개
+    document.getElementById('cwLabel').textContent = '시민 제시어';
+    document.getElementById('lw').textContent = state.liarWord;
+    document.getElementById('lwRow').style.display = '';
+  } else {
+    // 라이어 모드: 라이어는 제시어가 없었음 → 제시어 하나만 공개
+    document.getElementById('cwLabel').textContent = '제시어';
+    document.getElementById('lwRow').style.display = 'none';
+  }
+  show('reveal');
+  announceReveal();
+}
+function announceReveal(){
+  let text = `라이어는, ${spokenLiarNames()}였습니다.`;
+  if(state.mode === 'bluff'){
+    text += ` 시민 제시어는 ${state.citizenWord}, 라이어 제시어는 ${state.liarWord} 였습니다.`;
+  } else {
+    text += ` 제시어는 ${state.citizenWord} 였습니다.`;
+  }
+  speak(text);
+}
+
+/* ---------- 처음으로 (설정 화면으로 초기화) ---------- */
+function toSetup(){
+  speechSynthesis && speechSynthesis.cancel();
+  show('setup');
+}
+
+/* ---------- PWA: 서비스워커 등록 (오프라인/홈화면) ---------- */
+// file://에서는 등록 안 됨 — 웹서버(HTTPS/localhost)로 열어야 동작
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>

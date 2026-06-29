@@ -1,0 +1,15 @@
+{
+  "name": "홍심영범의 라이어게임",
+  "short_name": "라이어게임",
+  "description": "폰 하나로 돌려가며 즐기는 음성 라이어 게임",
+  "lang": "ko-KR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

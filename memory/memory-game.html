@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>홍심영범의 기억력게임</title>
+<!-- PWA (홈 화면 추가 · 오프라인) -->
+<meta name="theme-color" content="#0f172a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="기억력게임">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon.svg">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 6px;
+    text-align: center;
+    background: linear-gradient(90deg, #38bdf8, #818cf8, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: #94a3b8; margin-bottom: 20px; font-size: 0.95rem; }
+
+  .info {
+    display: flex;
+    gap: 22px;
+    margin-bottom: 8px;
+    font-size: 1.05rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .info span { color: #94a3b8; }
+  .info b { color: #f1f5f9; }
+
+  /* 큰 타이머 */
+  #timer {
+    font-family: 'Consolas', 'Menlo', monospace;
+    font-size: 2.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #fbbf24;
+    text-shadow: 0 0 18px rgba(251,191,36,0.5);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 10px;
+  }
+
+  #status {
+    min-height: 26px;
+    margin-bottom: 14px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #93c5fd;
+    text-align: center;
+  }
+
+  #gameScreen { display: flex; flex-direction: column; align-items: center; width: 100%; }
+
+  .grid {
+    display: grid;
+    gap: 10px;
+    width: min(92vw, 520px);
+    aspect-ratio: 1;
+    margin: 0 auto 22px;
+  }
+  .grid.free { display: block; position: relative; }
+  .grid.free .block { position: absolute; }
+
+  .block {
+    border-radius: 16px;
+    background: #334155;
+    box-shadow: inset 0 -4px 0 rgba(0,0,0,0.25), 0 3px 8px rgba(0,0,0,0.3);
+    cursor: pointer;
+    transition: transform 0.07s, background 0.12s, box-shadow 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #f1f5f9;
+    aspect-ratio: 1;
+  }
+  .block.round { border-radius: 50% !important; }
+  /* 다이아몬드: clip-path 로 마름모 (transform 은 scale 용으로 남겨둠) */
+  .block.diamond {
+    border-radius: 0 !important;
+    box-shadow: none;
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  }
+  .block.diamond.active { filter: drop-shadow(0 0 10px #38bdf8); }
+  .block.diamond.done   { filter: drop-shadow(0 0 8px #22c55e); }
+  .block.diamond.wrong  { filter: drop-shadow(0 0 10px #ef4444); }
+  .block.hidden-num { color: transparent; }
+  .block.active { background: #38bdf8; box-shadow: 0 0 22px #38bdf8; transform: scale(1.1); color: #fff !important; z-index: 2; }
+  .block.done { background: #22c55e; color: #fff; box-shadow: 0 0 16px rgba(34,197,94,0.6); }
+  .block.wrong { background: #ef4444; color: #fff; box-shadow: 0 0 20px #ef4444; }
+  .block.clickable:active { transform: scale(0.94); }
+
+  .controls { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  button {
+    font-size: 1.05rem;
+    font-weight: 600;
+    padding: 12px 26px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    background: linear-gradient(90deg, #38bdf8, #6366f1);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+    transition: transform 0.08s, opacity 0.15s;
+  }
+  button.ghost { background: #475569; box-shadow: none; }
+  button:hover { transform: translateY(-2px); }
+  button:active { transform: translateY(0); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  select {
+    font-size: 1.05rem;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #475569;
+    background: #1e293b;
+    color: #e2e8f0;
+    cursor: pointer;
+  }
+
+  .panel {
+    background: rgba(15,23,42,0.75);
+    border: 1px solid #334155;
+    border-radius: 18px;
+    padding: 28px 32px;
+    text-align: center;
+    max-width: 440px;
+  }
+  .panel h2 { margin-bottom: 16px; font-size: 1.4rem; }
+  .panel p { margin-bottom: 20px; color: #cbd5e1; line-height: 1.6; }
+  .row { display: flex; gap: 12px; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .row label { color: #94a3b8; }
+  .row select { width: 260px; flex: 0 0 260px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <h1>🧠 홍심영범의 기억력게임</h1>
+  <div class="subtitle">순서를 기억하고 똑같이 눌러보세요</div>
+
+  <!-- 시작 화면 -->
+  <div id="startScreen" class="panel">
+    <h2>게임 설정</h2>
+    <div class="row">
+      <label>난이도</label>
+      <select id="levelSelect"></select>
+    </div>
+    <div class="row">
+      <label>블록 모양</label>
+      <select id="shapeSelect">
+        <option value="square">⬛ 사각형 (기본)</option>
+        <option value="circle">⭕ 원형 (시계 배치)</option>
+        <option value="diamond">💎 다이아몬드 (배치 랜덤)</option>
+      </select>
+    </div>
+    <div class="controls">
+      <button id="startBtn">🎮 시작하기</button>
+    </div>
+  </div>
+
+  <!-- 게임 화면 -->
+  <div id="gameScreen" class="hidden">
+    <div class="info">
+      <span>난이도 <b id="levelLabel">Easy</b></span>
+      <span>블록 <b id="sizeLabel">4칸</b></span>
+    </div>
+    <div id="timer">00:00:00.000</div>
+    <div id="status">잘 보세요!</div>
+    <div class="grid" id="grid"></div>
+    <div class="controls">
+      <button id="replayBtn" class="ghost">👀 다시 보기</button>
+      <button id="quitBtn" class="ghost">그만두기</button>
+    </div>
+  </div>
+
+  <!-- 결과 화면 -->
+  <div id="resultScreen" class="panel hidden">
+    <h2 id="resultTitle"></h2>
+    <p id="resultText"></p>
+    <div class="controls" id="resultControls"></div>
+  </div>
+
+<script>
+/* ===== 사운드 (Web Audio API - 오프라인) ===== */
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AC();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();  // iOS 오디오 잠금 해제
+}
+function tone(freq, start, dur, type = 'sine', vol = 0.2) {
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime + start;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.02);
+}
+const sound = {
+  start()    { [523,659,784,1047].forEach((f,i)=>tone(f, i*0.1, 0.18, 'triangle', 0.25)); },
+  demo(step) { tone(440 + step*40, 0, 0.14, 'sine', 0.2); },
+  correct()  { tone(1047, 0, 0.1, 'sine', 0.2); },
+  wrong()    { tone(196, 0, 0.35, 'sawtooth', 0.25); tone(146, 0.08, 0.35, 'sawtooth', 0.22); },
+  complete() { [523,659,784,1047,1319].forEach((f,i)=>tone(f, i*0.12, 0.22, 'triangle', 0.28)); },
+};
+
+/* ===== 요소 ===== */
+const startScreen = document.getElementById('startScreen');
+const gameScreen = document.getElementById('gameScreen');
+const resultScreen = document.getElementById('resultScreen');
+const levelSelect = document.getElementById('levelSelect');
+const shapeSelect = document.getElementById('shapeSelect');
+const startBtn = document.getElementById('startBtn');
+const grid = document.getElementById('grid');
+const statusEl = document.getElementById('status');
+const levelLabel = document.getElementById('levelLabel');
+const sizeLabel = document.getElementById('sizeLabel');
+const timerEl = document.getElementById('timer');
+const replayBtn = document.getElementById('replayBtn');
+const quitBtn = document.getElementById('quitBtn');
+const resultTitle = document.getElementById('resultTitle');
+const resultText = document.getElementById('resultText');
+const resultControls = document.getElementById('resultControls');
+
+/* ===== 난이도 3단계 ===== */
+const LEVELS = [
+  { name: 'Easy',   size: 2 },   // 2×2 = 4칸
+  { name: 'Normal', size: 3 },   // 3×3 = 9칸
+  { name: 'Hard',   size: 4 },   // 4×4 = 16칸
+];
+
+/* ===== 상태 ===== */
+let level = 1;             // 1~3
+let size = 2;
+let shape = 'square';      // 'square' | 'circle'
+let blocks = [];
+let expected = 1;
+let totalCount = 0;
+let playing = false;
+let demoing = false;
+let gen = 0;               // 데모 중단 감지
+let rafId = null;
+let startTime = 0;
+let elapsed = 0;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* 난이도 옵션 채우기 */
+LEVELS.forEach((L, i) => {
+  const opt = document.createElement('option');
+  opt.value = i + 1;
+  opt.textContent = `${L.name} — ${L.size}×${L.size} (${L.size*L.size}칸)`;
+  levelSelect.appendChild(opt);
+});
+
+/* ===== 화면 전환 ===== */
+function show(screen) {
+  [startScreen, gameScreen, resultScreen].forEach(s => s.classList.add('hidden'));
+  screen.classList.remove('hidden');
+}
+
+/* ===== 타이머 (hh:mm:ss.zzz) ===== */
+const p2 = n => String(n).padStart(2, '0');
+const p3 = n => String(n).padStart(3, '0');
+function fmt(ms) {
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor(ms / 60000) % 60;
+  const s = Math.floor(ms / 1000) % 60;
+  const z = Math.floor(ms % 1000);
+  return `${p2(h)}:${p2(m)}:${p2(s)}.${p3(z)}`;
+}
+function fmtKorean(ms) {
+  const totalSec = ms / 1000;
+  const m = Math.floor(totalSec / 60);
+  const s = (totalSec % 60).toFixed(2);
+  return m > 0 ? `${m}분 ${s}초` : `${s}초`;
+}
+function startTimer() {
+  startTime = performance.now();
+  const tick = () => {
+    elapsed = performance.now() - startTime;
+    timerEl.textContent = fmt(elapsed);
+    rafId = requestAnimationFrame(tick);
+  };
+  tick();
+}
+function stopTimer() {
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  elapsed = performance.now() - startTime;
+  timerEl.textContent = fmt(elapsed);
+}
+
+/* ===== 게임 구성 ===== */
+function buildGrid() {
+  const L = LEVELS[level - 1];
+  size = L.size;
+  totalCount = size * size;
+  expected = 1;
+  playing = false;
+  demoing = false;
+
+  levelLabel.textContent = L.name;
+  sizeLabel.textContent =
+    shape === 'circle'  ? `${totalCount}칸 원형` :
+    shape === 'diamond' ? `${totalCount}칸 별자리` :
+    `${size}×${size}`;
+  timerEl.textContent = '00:00:00.000';
+
+  grid.innerHTML = '';
+  grid.classList.toggle('free', shape !== 'square');
+
+  // 1..totalCount 숫자를 섞어서 배치
+  const nums = Array.from({length: totalCount}, (_, i) => i + 1);
+  for (let i = nums.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [nums[i], nums[j]] = [nums[j], nums[i]];
+  }
+
+  blocks = [];
+
+  if (shape === 'square') {
+    grid.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+    grid.style.gap = size >= 4 ? '9px' : '12px';
+    const fontSize = Math.max(1.0, 2.6 - size * 0.18);
+    for (let i = 0; i < totalCount; i++) {
+      const b = makeBlock(nums[i]);
+      b.style.fontSize = fontSize + 'rem';
+      b.style.borderRadius = (size >= 4 ? 14 : 16) + 'px';
+      grid.appendChild(b);
+      blocks.push(b);
+    }
+  } else {
+    // 절대배치: 원형(시계) 또는 다이아몬드(별처럼 랜덤)
+    const wrapPx = grid.offsetWidth || 480;
+    let d, positions;
+
+    if (shape === 'circle') {
+      // 이웃 사이 원주 간격(2πR/개수)보다 지름이 작도록 계산해 겹침 방지
+      const gapFactor = 0.78;
+      const C = gapFactor * 2 * Math.PI / totalCount;
+      d = Math.min(34, 48 * C / (1 + C / 2));
+      const R = 48 - d / 2;
+      positions = [];
+      for (let i = 0; i < totalCount; i++) {
+        const ang = (-90 + i * 360 / totalCount) * Math.PI / 180; // 12시부터 시계방향
+        positions.push({ x: 50 + R * Math.cos(ang), y: 50 + R * Math.sin(ang) });
+      }
+    } else {
+      // 다이아몬드: 밤하늘 별처럼 랜덤 산포 (겹치지 않게)
+      d = Math.min(24, 62 / Math.sqrt(totalCount));
+      positions = scatterPositions(totalCount, d);
+    }
+
+    const fontMul = shape === 'diamond' ? 0.34 : 0.42;
+    for (let i = 0; i < totalCount; i++) {
+      const b = makeBlock(nums[i]);
+      b.classList.add(shape === 'circle' ? 'round' : 'diamond');
+      const p = positions[i];
+      b.style.width = d + '%';
+      b.style.height = d + '%';
+      b.style.left = (p.x - d / 2) + '%';
+      b.style.top  = (p.y - d / 2) + '%';
+      b.style.fontSize = (wrapPx * d / 100 * fontMul) + 'px';
+      grid.appendChild(b);
+      blocks.push(b);
+    }
+  }
+}
+
+/* 별처럼 랜덤 산포 (겹침 최소화) */
+function scatterPositions(count, d) {
+  const pts = [];
+  const lo = d / 2 + 2, hi = 98 - d / 2;
+  let minDist = d * 1.2;                 // 중심 간 최소 거리
+  for (let i = 0; i < count; i++) {
+    let placed = false;
+    for (let t = 0; t < 500 && !placed; t++) {
+      const x = lo + Math.random() * (hi - lo);
+      const y = lo + Math.random() * (hi - lo);
+      if (pts.every(p => Math.hypot(p.x - x, p.y - y) >= minDist)) {
+        pts.push({ x, y }); placed = true;
+      }
+      if (t === 250) minDist *= 0.85;    // 자리 못 찾으면 간격 완화
+    }
+    if (!placed) pts.push({ x: lo + Math.random() * (hi - lo), y: lo + Math.random() * (hi - lo) });
+  }
+  return pts;
+}
+
+function makeBlock(num) {
+  const b = document.createElement('div');
+  b.className = 'block hidden-num';
+  b.dataset.num = num;
+  b.textContent = num;
+  b.addEventListener('click', () => handleClick(b));
+  return b;
+}
+
+function startLevel() {
+  gen++;
+  show(gameScreen);   // 원형 좌표 계산에 필요한 크기 확보를 위해 먼저 표시
+  buildGrid();
+  playDemo();
+}
+
+/* 컴퓨터가 순서대로 블록을 눌러 보여줌 (동적 재생) */
+async function playDemo() {
+  const myGen = gen;
+  demoing = true;
+  playing = false;
+  replayBtn.disabled = true;
+  statusEl.textContent = '잘 보세요! 누르는 순서를 기억하세요';
+
+  const ordered = [...blocks].sort((a, b) => a.dataset.num - b.dataset.num);
+  const on = Math.max(280, 560 - totalCount * 10);
+  const off = Math.max(120, 260 - totalCount * 6);
+
+  await sleep(500);
+  for (let i = 0; i < ordered.length; i++) {
+    if (myGen !== gen) return;
+    const b = ordered[i];
+    b.classList.add('active');
+    sound.demo(i);
+    await sleep(on);
+    if (myGen !== gen) return;
+    b.classList.remove('active');
+    await sleep(off);
+  }
+  if (myGen !== gen) return;
+
+  demoing = false;
+  playing = true;
+  blocks.forEach(b => b.classList.add('clickable'));
+  replayBtn.disabled = false;
+  statusEl.textContent = '이제 같은 순서로 눌러보세요!';
+  startTimer();
+}
+
+/* 블록 클릭 처리 */
+function handleClick(b) {
+  if (!playing) return;
+  const num = Number(b.dataset.num);
+
+  if (num === expected) {
+    sound.correct();
+    b.classList.remove('hidden-num', 'clickable');
+    b.classList.add('done');
+    b.textContent = num;
+    expected++;
+    if (expected > totalCount) levelComplete();
+  } else {
+    playing = false;
+    stopTimer();
+    sound.wrong();
+    b.classList.remove('hidden-num');
+    b.classList.add('wrong');
+    b.textContent = num;
+    blocks.forEach(x => { x.classList.remove('hidden-num'); x.textContent = x.dataset.num; });
+    gameOver();
+  }
+}
+
+/* 레벨 완료 */
+function levelComplete() {
+  playing = false;
+  stopTimer();
+  sound.complete();
+  const L = LEVELS[level - 1];
+  const timeStr = `${fmt(elapsed)} (${fmtKorean(elapsed)})`;
+
+  if (level >= LEVELS.length) {
+    resultTitle.textContent = '🎉 전 단계 클리어!';
+    resultText.innerHTML =
+      `축하합니다! <b>${L.name} (${size}×${size})</b>까지 모두 완료했습니다.<br>` +
+      `마지막 단계 기록: <b>${timeStr}</b>`;
+    resultControls.innerHTML = '';
+    addBtn('처음으로', 'ghost', backToMenu);
+    show(resultScreen);
+    return;
+  }
+
+  const nextL = LEVELS[level];
+  resultTitle.textContent = '✅ 단계 완료!';
+  resultText.innerHTML =
+    `<b>${L.name} (${size}×${size})</b> 완료!<br>` +
+    `걸린 시간: <b>${timeStr}</b><br><br>` +
+    `다음은 <b>${nextL.name} (${nextL.size}×${nextL.size})</b> 입니다. 계속 하시겠습니까?`;
+  resultControls.innerHTML = '';
+  addBtn('➡️ 다음 단계로', '', () => { level++; startLevel(); });
+  addBtn('그만하기', 'ghost', backToMenu);
+  show(resultScreen);
+}
+
+/* 게임 오버 */
+function gameOver() {
+  const L = LEVELS[level - 1];
+  const timeStr = `${fmt(elapsed)} (${fmtKorean(elapsed)})`;
+  resultTitle.textContent = '❌ 실패!';
+  resultText.innerHTML =
+    `<b>${L.name} (${size}×${size})</b> 에서 틀렸습니다.<br>` +
+    `진행 시간: <b>${timeStr}</b><br>` +
+    `${totalCount}칸 중 <b>${expected-1}칸</b> 성공`;
+  resultControls.innerHTML = '';
+  addBtn('🔄 이 단계 다시', '', () => startLevel());
+  addBtn('처음으로', 'ghost', backToMenu);
+  setTimeout(() => show(resultScreen), 900);
+}
+
+function addBtn(text, cls, fn) {
+  const b = document.createElement('button');
+  b.textContent = text;
+  if (cls) b.className = cls;
+  b.addEventListener('click', fn);
+  resultControls.appendChild(b);
+}
+
+function backToMenu() {
+  gen++;
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  show(startScreen);
+}
+
+/* "다시 보기" -> 진행 초기화하고 데모 재생 */
+function replayDemo() {
+  if (demoing) return;
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  timerEl.textContent = '00:00:00.000';
+  expected = 1;
+  blocks.forEach(b => {
+    b.classList.remove('done', 'wrong', 'active', 'clickable');
+    b.classList.add('hidden-num');
+    b.textContent = b.dataset.num;
+  });
+  gen++;
+  playDemo();
+}
+
+/* ===== 이벤트 ===== */
+startBtn.addEventListener('click', () => {
+  initAudio();
+  sound.start();
+  level = Number(levelSelect.value);
+  shape = shapeSelect.value;
+  startLevel();
+});
+replayBtn.addEventListener('click', replayDemo);
+quitBtn.addEventListener('click', () => {
+  if (confirm('정말 그만두시겠습니까?')) backToMenu();
+});
+
+/* ===== PWA 서비스워커 등록 (오프라인 캐시) ===== */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

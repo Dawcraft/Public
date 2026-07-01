@@ -1,0 +1,20 @@
+{
+  "name": "홍심영범의 기억력게임",
+  "short_name": "기억력게임",
+  "description": "순서를 기억하고 똑같이 눌러 맞히는 오프라인 기억력 게임",
+  "start_url": "./memory-game.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

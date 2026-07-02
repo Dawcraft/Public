@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPY::20Q // 스무고개</title>
+<style>
+  :root{
+    --cyan:#00f0ff; --magenta:#ff00e5; --lime:#39ff14; --amber:#ffb000;
+    --bg:#05060d; --panel:rgba(10,14,28,0.75);
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body{
+    font-family:"Segoe UI","Malgun Gothic",sans-serif;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(255,0,229,0.12), transparent 40%),
+      radial-gradient(circle at 80% 90%, rgba(0,240,255,0.12), transparent 40%),
+      var(--bg);
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:16px; color:#e6f7ff; overflow-x:hidden;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:
+      linear-gradient(rgba(0,240,255,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,240,255,0.06) 1px, transparent 1px);
+    background-size:40px 40px;
+    mask-image:radial-gradient(circle at center, #000 30%, transparent 90%);
+  }
+  body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:2;
+    background:repeating-linear-gradient(transparent 0 2px, rgba(0,0,0,0.15) 3px 4px);
+    mix-blend-mode:overlay;
+  }
+  .card{
+    position:relative; z-index:3; background:var(--panel); backdrop-filter:blur(8px);
+    width:100%; max-width:680px; border:1px solid rgba(0,240,255,0.4); border-radius:14px;
+    box-shadow:0 0 30px rgba(0,240,255,0.25), inset 0 0 30px rgba(0,240,255,0.05);
+    padding:26px 22px 30px; text-align:center;
+  }
+  .corner{ position:absolute; width:16px; height:16px; border:2px solid var(--magenta); }
+  .corner.tl{ top:8px; left:8px; border-right:0; border-bottom:0;}
+  .corner.tr{ top:8px; right:8px; border-left:0; border-bottom:0;}
+  .corner.bl{ bottom:8px; left:8px; border-right:0; border-top:0;}
+  .corner.br{ bottom:8px; right:8px; border-left:0; border-top:0;}
+
+  h1{ font-size:26px; letter-spacing:3px; font-weight:800; color:#fff;
+      text-shadow:0 0 8px var(--cyan),0 0 18px var(--cyan); margin-bottom:4px; }
+  h1 .mag{ color:var(--magenta); text-shadow:0 0 8px var(--magenta); }
+  .sub{ color:#7fd6e6; font-size:12px; letter-spacing:2px; margin-bottom:22px; text-transform:uppercase; }
+
+  .lvl-title{ font-size:15px; letter-spacing:2px; color:var(--amber); margin-bottom:18px; text-shadow:0 0 8px var(--amber); }
+  .topics{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media(max-width:480px){ .topics{ grid-template-columns:1fr; } }
+  .topic{
+    position:relative; cursor:pointer; border:1px solid rgba(255,255,255,0.15);
+    border-radius:12px; padding:18px; text-align:left;
+    background:linear-gradient(90deg, rgba(255,255,255,0.04), transparent); transition:.2s;
+  }
+  .topic:hover{ transform:translateY(-3px); }
+  .topic .name{ font-size:21px; font-weight:800; letter-spacing:1px; }
+  .topic .diff{ font-size:13px; opacity:.85; }
+  .topic .cnt{ font-size:12px; color:#8ba0bb; margin-top:6px; }
+
+  .stage{ border:1px solid rgba(0,240,255,0.3); border-radius:12px; padding:22px 18px; margin-bottom:18px; background:rgba(0,0,0,0.35); }
+  .gogae-num{ font-size:18px; font-weight:800; letter-spacing:3px; color:var(--amber); text-shadow:0 0 10px var(--amber); margin-bottom:14px; }
+  .hint{ font-size:25px; font-weight:600; line-height:1.5; min-height:96px; display:flex; align-items:center; justify-content:center; color:#eafcff; text-shadow:0 0 6px rgba(0,240,255,0.3); }
+  .bar{ height:8px; border-radius:6px; background:rgba(255,255,255,0.1); overflow:hidden; margin-top:14px; }
+  .bar > i{ display:block; height:100%; width:5%; background:linear-gradient(90deg,var(--cyan),var(--magenta)); box-shadow:0 0 10px var(--cyan); transition:width .3s; }
+
+  .buttons{ display:grid; gap:12px; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .btn{ border:1px solid; background:transparent; border-radius:10px; padding:20px 12px; font-size:19px; font-weight:800; letter-spacing:1px; cursor:pointer; color:#fff; transition:.12s; text-transform:uppercase; }
+  .btn:active{ transform:scale(.97); }
+  .btn.mic{ border-color:var(--magenta); color:var(--magenta); text-shadow:0 0 8px var(--magenta); box-shadow:inset 0 0 20px rgba(255,0,229,0.12);}
+  .btn.mic.listening{ background:var(--magenta); color:#000; animation:pulse 1s infinite; }
+  .btn.hf{ border-color:var(--amber); color:var(--amber); text-shadow:0 0 8px var(--amber); }
+  .btn.hf.on{ background:var(--amber); color:#000; animation:pulse 1s infinite; }
+  .btn.next{ border-color:var(--cyan); color:var(--cyan); text-shadow:0 0 8px var(--cyan); box-shadow:inset 0 0 20px rgba(0,240,255,0.12);}
+  .btn.replay{ border-color:#5a6b8c; color:#a9bcd8; }
+  .btn.new{ border-color:var(--lime); color:var(--lime); text-shadow:0 0 8px var(--lime); }
+  .btn.small{ padding:14px; font-size:14px; }
+  .btn:disabled{ opacity:.35; cursor:not-allowed; }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,176,0,.6);} 50%{ box-shadow:0 0 0 16px rgba(255,176,0,0);} }
+
+  .status{ margin-top:16px; font-size:15px; min-height:24px; color:var(--amber); letter-spacing:.5px; }
+  .heard{ color:var(--cyan); }
+  .result-answer{ font-size:36px; font-weight:900; letter-spacing:4px; color:var(--lime); text-shadow:0 0 14px var(--lime); }
+  .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .tag{ font-size:12px; letter-spacing:2px; padding:4px 10px; border:1px solid; border-radius:6px; }
+
+  details.legend{ margin-top:22px; border:1px solid rgba(255,255,255,0.12); border-radius:10px; text-align:left; overflow:hidden; }
+  details.legend summary{ cursor:pointer; list-style:none; padding:14px 16px; font-size:14px; letter-spacing:1px; color:var(--cyan); background:rgba(0,240,255,0.06); }
+  details.legend summary::-webkit-details-marker{ display:none; }
+  details.legend[open] summary{ border-bottom:1px solid rgba(255,255,255,0.12); }
+  .legend-body{ padding:12px 16px 16px; max-height:340px; overflow-y:auto; }
+  .legend-topic{ margin-bottom:12px; }
+  .legend-topic h4{ font-size:13px; color:var(--amber); margin-bottom:6px; letter-spacing:1px; }
+  .legend-topic .ans{ display:inline-block; font-size:13px; color:#cfe0f2; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:3px 9px; margin:3px 4px 0 0; }
+
+  .note{ margin-top:16px; font-size:11px; color:#6f86a8; line-height:1.7; letter-spacing:.5px; }
+  .hidden{ display:none; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <span class="corner tl"></span><span class="corner tr"></span>
+    <span class="corner bl"></span><span class="corner br"></span>
+
+    <h1>SPY<span class="mag">::</span>20Q</h1>
+    <p class="sub">Twenty Questions // 스무고개 프로토콜</p>
+
+    <div id="menu">
+      <div class="lvl-title">▷ 주제를 선택하세요</div>
+      <div class="topics" id="topicGrid"></div>
+      <details class="legend">
+        <summary>📖 정답 범례 &nbsp;— 궁금하면 여기서 정답을 찾아보세요 (스포일러 주의!)</summary>
+        <div class="legend-body" id="legendBody"></div>
+      </details>
+    </div>
+
+    <div id="game" class="hidden">
+      <div class="topbar">
+        <span class="tag" id="lvlTag">TOPIC</span>
+        <button class="btn small new" id="menuBtn">◂ 주제 변경</button>
+      </div>
+      <div class="stage">
+        <div class="gogae-num" id="gogaeNum">첫번째 고개</div>
+        <div class="hint" id="hint">준비 중...</div>
+        <div class="bar"><i id="barFill"></i></div>
+      </div>
+      <div class="buttons">
+        <button class="btn hf" id="hfBtn">🎙️ 핸즈프리 모드 (음성으로 조작)</button>
+        <button class="btn mic" id="micBtn">🎤 정답 말하기</button>
+        <div class="row2">
+          <button class="btn replay" id="replayBtn">🔊 다시 듣기</button>
+          <button class="btn next" id="nextBtn">다음 고개 ▶</button>
+        </div>
+        <button class="btn new small" id="newBtn">🔄 다음 문제</button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="note" id="note">
+      ※ 음성 인식은 <b>Chrome / Edge</b>에서 마이크 권한 허용 시 동작합니다. (파일 직접 실행 시 제한될 수 있어요)<br>
+      🎙️ 핸즈프리: <b>“다음”</b>(다음 고개) · <b>“다시”</b>(다시 듣기) · <b>“문제”</b>(새 문제) · 정답을 그냥 말하기 · <b>“메뉴”</b>(주제 선택)
+    </div>
+  </div>
+
+<!-- ===== 주제 데이터 (data 폴더의 각 파일이 TOPIC_DATA 에 문제를 추가) ===== -->
+<script>window.TOPIC_DATA=[];</script>
+<script src="data/fruit.js"></script>
+<script src="data/food.js"></script>
+<script src="data/animal.js"></script>
+<script src="data/vehicle.js"></script>
+<script src="data/common.js"></script>
+<script src="data/sport.js"></script>
+<script src="data/job.js"></script>
+<script src="data/country.js"></script>
+<script src="data/economy.js"></script>
+<script src="data/history.js"></script>
+
+<!-- ===== 게임 엔진 ===== -->
+<script>
+const TOPICS = window.TOPIC_DATA || [];
+const DIFF_COLOR = { "초급":"var(--lime)", "중급":"var(--cyan)", "상급":"var(--magenta)" };
+
+const ORD = ["첫","두","세","네","다섯","여섯","일곱","여덟","아홉","열",
+  "열한","열두","열세","열네","열다섯","열여섯","열일곱","열여덟","열아홉","스무"];
+const ordinal = i => ORD[i] + "번째";
+
+let pool=[], order=[], orderPos=0, item=null, hintIdx=0, solved=false;
+let handsFree=false, speaking=false, recActive=false;
+
+const el = id => document.getElementById(id);
+const menu=el("menu"), game=el("game");
+
+/* ---------------- 메뉴/범례 ---------------- */
+(function buildMenu(){
+  const grid=el("topicGrid"), leg=el("legendBody");
+  if(!TOPICS.length){
+    grid.innerHTML='<div style="grid-column:1/-1;color:#ff9;">데이터 파일을 불러오지 못했어요. 스무고개.html 과 data 폴더가 같은 위치에 있는지 확인하세요.</div>';
+    return;
+  }
+  TOPICS.forEach((t,idx)=>{
+    const c=DIFF_COLOR[t.diff]||"var(--cyan)";
+    const card=document.createElement("div");
+    card.className="topic"; card.style.borderColor=c;
+    card.innerHTML=`<div class="name" style="color:${c};text-shadow:0 0 8px ${c}">${t.name} <span class="diff">(${t.diff})</span></div>
+                    <div class="cnt">문제 ${t.items.length}개</div>`;
+    card.addEventListener("click",()=>startTopic(idx));
+    grid.appendChild(card);
+
+    const lt=document.createElement("div");
+    lt.className="legend-topic";
+    lt.innerHTML=`<h4>${t.name} (${t.diff})</h4>`+
+      t.items.map(i=>`<span class="ans">${i.answer}</span>`).join("");
+    leg.appendChild(lt);
+  });
+})();
+
+/* ---------------- TTS ---------------- */
+function speak(text){
+  if(!("speechSynthesis" in window)){ if(handsFree) startRecog(); return; }
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang="ko-KR";
+  u.onstart=()=>{ speaking=true; stopRecog(); };
+  u.onend=()=>{ speaking=false; if(handsFree) startRecog(); };
+  speechSynthesis.speak(u);
+}
+
+/* ---------------- 유틸 ---------------- */
+function shuffle(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor((i+1)*((performance.now()*(i+7))%1000)/1000)%(i+1);
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+const norm = s => (s||"").replace(/\s+/g,"").replace(/[.,!?~]/g,"").toLowerCase();
+
+/* ---------------- 게임 흐름 ---------------- */
+function startTopic(idx){
+  const t=TOPICS[idx];
+  pool=t.items; order=shuffle(pool.map((_,i)=>i)); orderPos=0;
+  const c=DIFF_COLOR[t.diff]||"var(--cyan)";
+  el("lvlTag").textContent=`${t.name} (${t.diff})`;
+  el("lvlTag").style.color=c; el("lvlTag").style.borderColor=c;
+  menu.classList.add("hidden"); game.classList.remove("hidden");
+  newQuestion();
+}
+function newQuestion(){
+  if(orderPos>=order.length){ order=shuffle(pool.map((_,i)=>i)); orderPos=0; }
+  item=pool[order[orderPos++]];
+  hintIdx=0; solved=false;
+  el("nextBtn").disabled=false; el("micBtn").disabled=handsFree;
+  el("status").textContent="";
+  showHint(true);
+}
+function showHint(say){
+  el("gogaeNum").textContent=ordinal(hintIdx)+" 고개";
+  el("hint").textContent=item.hints[hintIdx];
+  el("barFill").style.width=((hintIdx+1)/20*100)+"%";
+  el("nextBtn").textContent=hintIdx>=19 ? "정답 공개" : "다음 고개 ▶";
+  if(say) speak(`${ordinal(hintIdx)}. ${item.hints[hintIdx]}`);
+}
+function nextHint(){
+  if(solved) return;
+  if(hintIdx>=19){ reveal(false); return; }
+  hintIdx++; showHint(true);
+}
+function replay(){
+  if(solved){ speak(`정답은 ${item.answer}.`); return; }
+  speak(`${ordinal(hintIdx)}. ${item.hints[hintIdx]}`);
+}
+function reveal(right){
+  solved=true;
+  el("micBtn").disabled=true; el("nextBtn").disabled=true;
+  el("gogaeNum").textContent=right ? "◆ 정답 ◆" : "정답 공개";
+  el("hint").innerHTML=`<div><div class="result-answer">${item.answer}</div>`+
+    `<div style="font-size:15px;color:#9fb3c9;margin-top:6px;">${right?"정답입니다! 🎉":"아쉽네요, 이거였어요!"}${handsFree?" — '문제'라고 말하면 다음 문제":""}</div></div>`;
+  speak(right ? `딩동댕! 정답입니다. ${item.answer} 맞았어요.` : `정답은 ${item.answer} 였어요.`);
+}
+function goMenu(){
+  setHandsFree(false);
+  if("speechSynthesis" in window) speechSynthesis.cancel();
+  game.classList.add("hidden"); menu.classList.remove("hidden");
+}
+
+/* ---------------- 음성 인식 ---------------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recog=null;
+if(SR){
+  recog=new SR();
+  recog.lang="ko-KR"; recog.interimResults=false; recog.maxAlternatives=3;
+  recog.onstart=()=>{ recActive=true; if(handsFree){ el("hfBtn").textContent="🎙️ 듣는 중… ('다음'·정답·'문제'·'메뉴')"; } };
+  recog.onend=()=>{ recActive=false; if(!handsFree){ el("micBtn").classList.remove("listening"); el("micBtn").textContent="🎤 정답 말하기"; } if(handsFree && !speaking) startRecog(); };
+  recog.onerror=e=>{
+    if(e.error==="not-allowed"){ el("status").textContent="마이크 권한을 허용해주세요."; setHandsFree(false); }
+    else if(!handsFree){ el("status").textContent="음성을 인식하지 못했어요. 다시!"; }
+  };
+  recog.onresult=ev=>{
+    const gs=[]; for(let i=0;i<ev.results[0].length;i++) gs.push(ev.results[0][i].transcript);
+    if(handsFree) processHandsFree(gs); else checkAnswer(gs);
+  };
+}
+function startRecog(){ if(!SR||!handsFree||speaking||recActive) return; try{ recog.start(); recActive=true; }catch(e){} }
+function stopRecog(){ if(!SR) return; try{ recog.stop(); }catch(e){} }
+
+function setHandsFree(on){
+  handsFree=on;
+  const b=el("hfBtn");
+  if(on){
+    b.classList.add("on"); b.textContent="🎙️ 핸즈프리 ON (끄려면 탭)";
+    el("micBtn").disabled=true;
+    speak("핸즈프리 모드입니다. 정답을 말하거나, 다음, 문제, 메뉴 라고 말하세요.");
+  }else{
+    b.classList.remove("on"); b.textContent="🎙️ 핸즈프리 모드 (음성으로 조작)";
+    if(!solved) el("micBtn").disabled=false;
+    stopRecog();
+  }
+}
+
+function processHandsFree(gs){
+  const t=norm(gs[0]);
+  if(t.length<2) return;                       // 잡음/무음 무시
+  el("status").innerHTML=`<span class="heard">🗣️ "${gs[0]||""}"</span>`;
+  if(/(메뉴|주제변경|나가|그만|종료)/.test(t)){ goMenu(); return; }
+  if(/(새문제|다른문제|다음문제|문제)/.test(t)){ newQuestion(); return; }
+  if(solved){ if(/(다음|계속)/.test(t)) newQuestion(); return; }
+  if(/(다시|한번더|들려)/.test(t)){ replay(); return; }
+  if(/(다음|넘겨|넘어|스킵)/.test(t)){ nextHint(); return; }
+  if(t==="정답"){ speak("정답을 말해보세요."); return; }
+  checkAnswer(gs);
+}
+
+function checkAnswer(guesses){
+  const targets=[item.answer,...(item.accept||[])].map(norm).filter(t=>t.length>0);
+  el("status").innerHTML=`<span class="heard">🗣️ 들린 말: "${guesses[0]||""}"</span>`;
+  const hit=guesses.some(g=>{
+    const n=norm(g);
+    if(n.length<2) return false;               // ★ 버그 수정: 빈/짧은 인식은 오답 처리
+    return targets.some(t => n.includes(t) || (t.length>=2 && t.includes(n)));
+  });
+  if(hit){ reveal(true); }
+  else{
+    speak("땡! 아쉬워요. 다시 도전해보세요.");
+    setTimeout(()=>{ el("status").innerHTML+=' <span style="color:var(--magenta);">❌ 아니에요!</span>'; },50);
+  }
+}
+
+/* ---------------- 이벤트 ---------------- */
+el("hfBtn").addEventListener("click",()=>{
+  if(!SR){ el("status").textContent="이 브라우저는 음성 인식을 지원하지 않아요 (Chrome/Edge 권장)."; return; }
+  setHandsFree(!handsFree);
+});
+el("micBtn").addEventListener("click",()=>{
+  if(!SR){ el("status").textContent="이 브라우저는 음성 인식을 지원하지 않아요 (Chrome/Edge 권장)."; return; }
+  if(solved||handsFree) return;
+  if(recActive){ recog.stop(); return; }
+  if("speechSynthesis" in window) speechSynthesis.cancel();
+  el("micBtn").classList.add("listening"); el("micBtn").textContent="🎤 듣는 중...";
+  el("status").textContent="정답을 말해주세요!";
+  try{ recog.start(); }catch(e){}
+});
+el("replayBtn").addEventListener("click",replay);
+el("nextBtn").addEventListener("click",nextHint);
+el("newBtn").addEventListener("click",newQuestion);
+el("menuBtn").addEventListener("click",goMenu);
+
+if(!SR){ el("note").innerHTML="※ 이 브라우저는 음성 인식을 지원하지 않아요. <b>Chrome / Edge</b>로 열어주세요. (힌트 듣기·진행은 정상 동작)"; }
+</script>
+</body>
+</html>

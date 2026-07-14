@@ -125,6 +125,7 @@ input.code{text-align:center; font-size:30px; letter-spacing:.5em; font-weight:7
   border-radius:10px;padding:11px 13px;font-size:16px;letter-spacing:.03em;
 }
 .plist li .dot{width:9px;height:9px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime);flex:none}
+.plist li .num{flex:none;min-width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:rgba(0,240,255,.12);border:1px solid var(--line);color:var(--cyan);font-weight:800;font-size:13px}
 .plist li .tag{margin-left:auto;font-size:11px;letter-spacing:.15em;color:var(--amber);border:1px solid rgba(255,176,32,.4);padding:2px 8px;border-radius:20px}
 .plist li .tag.you{color:var(--cyan);border-color:var(--line)}
 .hint{color:var(--dim);font-size:13px;text-align:center;line-height:1.6;margin-top:12px}
@@ -189,7 +190,7 @@ a.link{color:var(--cyan)}
 
   <div class="brand">
     <h1>SPYFALL</h1>
-    <div class="kr">스파이<b>폴</b></div>
+    <div class="kr">탁소 스파이<b>폴</b></div>
   </div>
 
   <!-- ══ HOME ══ -->
@@ -248,12 +249,15 @@ a.link{color:var(--cyan)}
 
     <div id="game-card" class="gcard" style="margin-top:16px"></div>
 
-    <details class="places" style="margin-top:14px">
-      <summary>📍 전체 장소 목록 보기</summary>
+    <details class="places" id="place-details" style="margin-top:14px" open>
+      <summary>📍 전체 장소 목록</summary>
       <div class="placegrid" id="place-grid"></div>
     </details>
 
     <div class="hint" id="game-hint">서로 질문하며 스파이를 찾아내세요. 스파이는 장소를 알아내면 승리!</div>
+
+    <label class="fld" style="margin-bottom:6px">플레이어 (접속 순)</label>
+    <ul class="plist" id="game-player-list"></ul>
 
     <!-- host only -->
     <div id="game-host-controls" class="hide" style="margin-top:6px">
@@ -278,6 +282,7 @@ a.link{color:var(--cyan)}
   </section>
 
   <div class="foot">SPYFALL · 각자 폰으로 즐기는 파티게임</div>
+  <div class="foot" style="margin-top:2px">© 2026 최제홍</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -492,6 +497,16 @@ function renderGame(ps){
       <div class="role-lbl">장소</div><div class="place">${escapeHtml(round.location)}</div>
       <div class="role-lbl" style="margin-top:14px">당신의 역할</div><div class="role">${escapeHtml(me.role)}</div>`;
   }
+
+  // 플레이어 번호 목록 (접속한 순서)
+  const gul=$("#game-player-list"); gul.innerHTML="";
+  ps.forEach((p,i)=>{
+    const li=document.createElement("li");
+    li.innerHTML=`<span class="num">${i+1}</span><span>${escapeHtml(p.name)}</span>`;
+    if(p.id===MY_ID) li.innerHTML+='<span class="tag you">나</span>';
+    gul.appendChild(li);
+  });
+  $("#place-details").open=true;
 
   const host=amHost();
   $("#game-host-controls").classList.toggle("hide",!host);

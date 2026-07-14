@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SPYFALL · 스파이폴</title>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     ⚙️ FIREBASE 설정 — 여기에 본인 Firebase 프로젝트 설정을 붙여넣으세요.
+     (콘솔 → 프로젝트 설정 → 내 앱 → SDK 설정 및 구성 → 구성)
+     아래 값들이 그대로면 "설정 필요" 안내가 뜹니다.
+     ══════════════════════════════════════════════════════════════════ -->
+<script>
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyBpFrW_dOqNcP2wecNeGB-mkhlHgOUx_ZI",
+  authDomain:        "dawcraft-9bce8.firebaseapp.com",
+  databaseURL:       "https://dawcraft-9bce8-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "dawcraft-9bce8",
+  storageBucket:     "dawcraft-9bce8.firebasestorage.app",
+  messagingSenderId: "878144264266",
+  appId:             "1:878144264266:web:30bf90be28f34134f42eb3"
+};
+</script>
+
+<style>
+:root{
+  --bg:#070a12; --panel:#0c1120; --panel2:#111834;
+  --cyan:#00f0ff; --mag:#ff2bd6; --lime:#c6ff3a; --amber:#ffb020;
+  --ink:#dbe6ff; --dim:#7d89b0; --line:rgba(0,240,255,.25);
+  --danger:#ff4d6d; --cw:clamp(320px,94vw,720px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(0,240,255,.10), transparent 60%),
+    linear-gradient(var(--bg),#04060c);
+  color:var(--ink);
+  font-family:"Segoe UI",-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+  min-height:100%; display:flex; flex-direction:column; align-items:center;
+  padding:18px 14px 40px; overflow-x:hidden;
+}
+/* grid + scanline backdrop */
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:
+    linear-gradient(rgba(0,240,255,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,240,255,.05) 1px,transparent 1px);
+  background-size:38px 38px; mask:radial-gradient(120% 90% at 50% 0%,#000 40%,transparent 85%);
+}
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.35;
+  background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.35) 2px 3px);
+}
+.wrap{position:relative; z-index:1; width:var(--cw); display:flex; flex-direction:column; gap:16px}
+
+/* ── header ── */
+.brand{text-align:center; margin-top:6px}
+.brand h1{
+  margin:0; font-size:clamp(30px,9vw,54px); letter-spacing:.18em; font-weight:800;
+  color:#eaf7ff; text-shadow:0 0 14px rgba(0,240,255,.55),0 0 2px rgba(255,43,214,.6);
+}
+.brand .kr{color:var(--mag); font-size:clamp(13px,3.4vw,16px); letter-spacing:.5em; margin-top:2px}
+.brand .kr b{color:var(--cyan)}
+
+/* ── card panel with corner brackets ── */
+.panel{
+  position:relative; background:linear-gradient(180deg,var(--panel),var(--panel2));
+  border:1px solid var(--line); border-radius:14px; padding:20px 18px;
+  box-shadow:0 0 0 1px rgba(0,0,0,.4) inset, 0 10px 40px rgba(0,0,0,.45);
+}
+.panel::before,.panel::after{content:"";position:absolute;width:16px;height:16px;border:2px solid var(--cyan)}
+.panel::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+.panel::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+.corner{position:absolute;width:16px;height:16px;border:2px solid var(--cyan)}
+.corner.tr{top:-1px;right:-1px;border-left:0;border-bottom:0}
+.corner.bl{bottom:-1px;left:-1px;border-right:0;border-top:0}
+
+label.fld{display:block; font-size:12px; letter-spacing:.15em; color:var(--dim); margin:14px 0 6px; text-transform:uppercase}
+input.txt{
+  width:100%; background:#05080f; border:1px solid var(--line); color:var(--ink);
+  font-size:18px; padding:14px 14px; border-radius:10px; outline:none; letter-spacing:.05em;
+  font-family:inherit;
+}
+input.txt:focus{border-color:var(--cyan); box-shadow:0 0 0 3px rgba(0,240,255,.15)}
+input.code{text-align:center; font-size:30px; letter-spacing:.5em; font-weight:700}
+
+.btn{
+  width:100%; margin-top:14px; padding:16px; border-radius:11px; border:1px solid var(--cyan);
+  background:linear-gradient(180deg,rgba(0,240,255,.16),rgba(0,240,255,.05));
+  color:#eaffff; font-size:17px; font-weight:700; letter-spacing:.12em; cursor:pointer;
+  font-family:inherit; transition:transform .06s, box-shadow .2s;
+  text-shadow:0 0 8px rgba(0,240,255,.5);
+}
+.btn:active{transform:translateY(1px)}
+.btn:hover{box-shadow:0 0 18px rgba(0,240,255,.35)}
+.btn.mag{border-color:var(--mag); background:linear-gradient(180deg,rgba(255,43,214,.16),rgba(255,43,214,.05)); text-shadow:0 0 8px rgba(255,43,214,.5)}
+.btn.mag:hover{box-shadow:0 0 18px rgba(255,43,214,.35)}
+.btn.ghost{background:transparent; border-color:var(--dim); color:var(--dim); text-shadow:none; font-weight:600}
+.btn.ghost:hover{box-shadow:none; border-color:var(--ink); color:var(--ink)}
+.btn.danger{border-color:var(--danger); background:linear-gradient(180deg,rgba(255,77,109,.16),rgba(255,77,109,.05)); color:#ffd9e0; text-shadow:0 0 8px rgba(255,77,109,.5)}
+.btn:disabled{opacity:.4; cursor:not-allowed}
+.btn.sm{padding:11px; font-size:14px; margin-top:8px}
+.row{display:flex; gap:10px}
+.row>*{flex:1}
+
+.sep{display:flex;align-items:center;gap:10px;color:var(--dim);font-size:12px;letter-spacing:.3em;margin:16px 0 2px}
+.sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--line)}
+
+.hide{display:none !important}
+
+/* ── lobby ── */
+.roomcode{
+  text-align:center; margin:2px 0 14px;
+}
+.roomcode .lbl{font-size:11px;letter-spacing:.35em;color:var(--dim)}
+.roomcode .val{
+  font-size:46px; font-weight:800; letter-spacing:.28em; color:var(--lime);
+  text-shadow:0 0 16px rgba(198,255,58,.5); margin:2px 0;
+}
+.roomcode .copy{font-size:12px;color:var(--cyan);cursor:pointer;text-decoration:underline;letter-spacing:.1em}
+.plist{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-direction:column;gap:8px}
+.plist li{
+  display:flex;align-items:center;gap:10px;background:#05080f;border:1px solid var(--line);
+  border-radius:10px;padding:11px 13px;font-size:16px;letter-spacing:.03em;
+}
+.plist li .dot{width:9px;height:9px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime);flex:none}
+.plist li .tag{margin-left:auto;font-size:11px;letter-spacing:.15em;color:var(--amber);border:1px solid rgba(255,176,32,.4);padding:2px 8px;border-radius:20px}
+.plist li .tag.you{color:var(--cyan);border-color:var(--line)}
+.hint{color:var(--dim);font-size:13px;text-align:center;line-height:1.6;margin-top:12px}
+.count{text-align:center;color:var(--dim);font-size:12px;letter-spacing:.2em;margin-top:6px}
+
+/* stepper */
+.stepper{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:6px}
+.stepper button{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:#05080f;color:var(--cyan);font-size:24px;cursor:pointer}
+.stepper .n{font-size:26px;font-weight:800;min-width:40px;text-align:center;color:var(--ink)}
+
+/* ── game card ── */
+.gcard{
+  position:relative; text-align:center; padding:30px 18px; border-radius:16px;
+  border:1px solid var(--line); background:linear-gradient(180deg,#0a1024,#0e1638);
+  overflow:hidden;
+}
+.gcard.spy{border-color:var(--mag); background:linear-gradient(180deg,#1a0716,#25062a); box-shadow:0 0 30px rgba(255,43,214,.25) inset}
+.gcard .role-lbl{font-size:12px;letter-spacing:.35em;color:var(--dim);text-transform:uppercase}
+.gcard .place{font-size:clamp(30px,10vw,52px);font-weight:800;color:var(--lime);text-shadow:0 0 16px rgba(198,255,58,.45);margin:6px 0 2px;letter-spacing:.06em}
+.gcard .role{font-size:clamp(18px,5vw,24px);color:var(--cyan);letter-spacing:.08em;margin-top:2px}
+.gcard.spy .big{font-size:clamp(34px,11vw,58px);font-weight:800;color:var(--mag);text-shadow:0 0 20px rgba(255,43,214,.6);letter-spacing:.1em}
+.gcard.spy .sub{color:#ffb3ec;font-size:14px;letter-spacing:.06em;margin-top:10px;line-height:1.6}
+.emoji{font-size:44px;line-height:1;margin-bottom:6px}
+
+.timer{
+  text-align:center;font-size:clamp(40px,13vw,64px);font-weight:800;letter-spacing:.08em;
+  color:var(--cyan);text-shadow:0 0 16px rgba(0,240,255,.4);font-variant-numeric:tabular-nums;
+}
+.timer.low{color:var(--danger);text-shadow:0 0 16px rgba(255,77,109,.5);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.5}}
+.timer-lbl{text-align:center;color:var(--dim);font-size:11px;letter-spacing:.35em;margin-bottom:-6px}
+
+/* collapsible places */
+details.places{margin-top:4px;border:1px solid var(--line);border-radius:10px;background:#05080f;overflow:hidden}
+details.places>summary{padding:13px 15px;cursor:pointer;color:var(--cyan);font-size:14px;letter-spacing:.12em;list-style:none}
+details.places>summary::-webkit-details-marker{display:none}
+details.places>summary::after{content:"▼";float:right;font-size:11px;color:var(--dim)}
+details.places[open]>summary::after{content:"▲"}
+.placegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:7px;padding:12px}
+.placegrid span{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 6px;font-size:13px;text-align:center;color:var(--ink);letter-spacing:.02em}
+
+/* reveal */
+.reveal{text-align:center}
+.reveal .spy-name{font-size:clamp(26px,8vw,40px);font-weight:800;color:var(--mag);text-shadow:0 0 16px rgba(255,43,214,.5);margin:4px 0}
+.reveal .place-was{font-size:20px;color:var(--lime);margin-top:8px}
+
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:50;
+  background:#05080f;border:1px solid var(--cyan);color:var(--ink);padding:12px 20px;border-radius:10px;
+  font-size:14px;letter-spacing:.05em;box-shadow:0 0 20px rgba(0,240,255,.3);opacity:0;transition:opacity .25s;pointer-events:none;max-width:88vw;text-align:center
+}
+.toast.show{opacity:1}
+
+.foot{text-align:center;color:var(--dim);font-size:11px;letter-spacing:.2em;margin-top:6px;opacity:.7}
+a.link{color:var(--cyan)}
+.setup-warn{border-color:var(--amber)!important}
+.setup-warn .place{color:var(--amber);text-shadow:none;font-size:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brand">
+    <h1>SPYFALL</h1>
+    <div class="kr">스파이<b>폴</b></div>
+  </div>
+
+  <!-- ══ HOME ══ -->
+  <section id="screen-home" class="panel">
+    <span class="corner tr"></span><span class="corner bl"></span>
+    <label class="fld">플레이어 이름</label>
+    <input id="in-name" class="txt" maxlength="10" placeholder="이름을 입력하세요" autocomplete="off">
+
+    <label class="fld">방 코드로 참가</label>
+    <div class="row">
+      <input id="in-code" class="txt code" maxlength="4" inputmode="numeric" placeholder="0000" autocomplete="off">
+    </div>
+    <button id="btn-join" class="btn mag">🚪 참가하기</button>
+
+    <div class="sep">또는</div>
+    <button id="btn-create" class="btn">🎭 새 방 만들기</button>
+    <div class="foot" id="db-status"></div>
+  </section>
+
+  <!-- ══ LOBBY ══ -->
+  <section id="screen-lobby" class="panel hide">
+    <span class="corner tr"></span><span class="corner bl"></span>
+    <div class="roomcode">
+      <div class="lbl">ROOM CODE</div>
+      <div class="val" id="lobby-code">0000</div>
+      <div class="copy" id="btn-copy">📋 코드 복사</div>
+    </div>
+
+    <ul class="plist" id="player-list"></ul>
+    <div class="count" id="player-count"></div>
+
+    <!-- host only -->
+    <div id="host-controls" class="hide">
+      <label class="fld">스파이 인원</label>
+      <div class="stepper">
+        <button id="spy-minus">−</button>
+        <span class="n" id="spy-n">1</span>
+        <button id="spy-plus">+</button>
+      </div>
+      <button id="btn-start" class="btn">▶ 게임 시작</button>
+      <div class="hint" id="start-hint">최소 3명이 모이면 시작할 수 있어요.</div>
+    </div>
+
+    <!-- guest only -->
+    <div id="guest-wait" class="hint hide">호스트가 게임을 시작하기를 기다리는 중…</div>
+
+    <button id="btn-leave" class="btn ghost sm">← 방 나가기</button>
+  </section>
+
+  <!-- ══ GAME ══ -->
+  <section id="screen-game" class="panel hide">
+    <span class="corner tr"></span><span class="corner bl"></span>
+
+    <div class="timer-lbl">남은 시간</div>
+    <div class="timer" id="timer">08:00</div>
+
+    <div id="game-card" class="gcard" style="margin-top:16px"></div>
+
+    <details class="places" style="margin-top:14px">
+      <summary>📍 전체 장소 목록 보기</summary>
+      <div class="placegrid" id="place-grid"></div>
+    </details>
+
+    <div class="hint" id="game-hint">서로 질문하며 스파이를 찾아내세요. 스파이는 장소를 알아내면 승리!</div>
+
+    <!-- host only -->
+    <div id="game-host-controls" class="hide" style="margin-top:6px">
+      <button id="btn-reveal" class="btn danger sm">🔎 정답 공개 & 종료</button>
+    </div>
+    <button id="btn-back-lobby" class="btn ghost sm">← 로비로</button>
+  </section>
+
+  <!-- ══ REVEAL ══ -->
+  <section id="screen-reveal" class="panel hide">
+    <span class="corner tr"></span><span class="corner bl"></span>
+    <div class="reveal">
+      <div class="role-lbl" style="letter-spacing:.3em;color:var(--dim);text-transform:uppercase;font-size:12px">SPY WAS…</div>
+      <div class="spy-name" id="reveal-spy">—</div>
+      <div class="place-was" id="reveal-place">📍 장소: —</div>
+    </div>
+    <div id="reveal-host-controls" class="hide">
+      <button id="btn-again" class="btn">↻ 다시 시작 (새 라운드)</button>
+    </div>
+    <div id="reveal-guest-wait" class="hint hide">호스트가 다음 라운드를 준비 중…</div>
+    <button id="btn-reveal-leave" class="btn ghost sm">방 나가기</button>
+  </section>
+
+  <div class="foot">SPYFALL · 각자 폰으로 즐기는 파티게임</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+/* ══════════════════ 장소 데이터 (15곳) ══════════════════ */
+const LOCATIONS = [
+  { name:"학교",     emoji:"🏫", roles:["교장","담임선생님","학생","경비원","급식조리사","양호선생님","전학생","체육선생님"] },
+  { name:"병원",     emoji:"🏥", roles:["의사","간호사","환자","인턴","원무과직원","보호자","응급구조사","약사"] },
+  { name:"찜질방",   emoji:"♨️", roles:["때밀이","손님","매점직원","카운터","청소부","단골손님","사우나수리공","마사지사"] },
+  { name:"PC방",     emoji:"🖥️", roles:["알바생","게이머","사장","라면손님","청소부","대회참가자","스트리머","단골"] },
+  { name:"편의점",   emoji:"🏪", roles:["알바생","점장","손님","택배기사","진상손님","야간알바","납품기사","순찰경찰"] },
+  { name:"비행기",   emoji:"✈️", roles:["기장","승무원","승객","부기장","기내식담당","VIP손님","환승객","정비사"] },
+  { name:"해변",     emoji:"🏖️", roles:["안전요원","피서객","아이스크림상인","서퍼","커플","낚시꾼","조개캐는사람","파라솔대여상"] },
+  { name:"영화관",   emoji:"🎬", roles:["매표원","관객","매점직원","청소부","영사기사","커플","단체관람객","경비"] },
+  { name:"캠핑장",   emoji:"⛺", roles:["관리인","캠퍼","바베큐담당","등산객","낚시꾼","가족","글램핑손님","장작판매상"] },
+  { name:"지하철",   emoji:"🚇", roles:["기관사","승객","역무원","노숙자","소매치기","버스킹공연자","임산부","취객"] },
+  { name:"은행",     emoji:"🏦", roles:["은행원","고객","경비원","지점장","청소부","VIP고객","대출상담사","현금수송원"] },
+  { name:"놀이공원", emoji:"🎡", roles:["직원","손님","인형탈알바","미아","커플","안전요원","퍼레이드댄서","매표원"] },
+  { name:"카페",     emoji:"☕", roles:["바리스타","손님","사장","공부하는학생","노트북족","알바","단골","디저트셰프"] },
+  { name:"경찰서",   emoji:"🚓", roles:["경찰","형사","용의자","민원인","유치장수감자","서장","변호사","목격자"] },
+  { name:"헬스장",   emoji:"💪", roles:["트레이너","회원","프론트직원","청소부","헬스초보","보디빌더","요가강사","PT손님"] },
+];
+
+/* ══════════════════ 유틸 ══════════════════ */
+const $ = s => document.querySelector(s);
+const screens = ["home","lobby","game","reveal"];
+function show(name){ screens.forEach(s=>$("#screen-"+s).classList.toggle("hide", s!==name)); }
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
+function rand(n){ return Math.floor(Math.random()*n); }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=rand(i+1);[a[i],a[j]]=[a[j],a[i]];} return a; }
+function pad(n){ return String(n).padStart(2,"0"); }
+function isConfigured(){ return FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey!=="YOUR_API_KEY"; }
+
+/* 내 고유 ID (새로고침해도 유지) */
+let MY_ID = sessionStorage.getItem("spyfall_id");
+if(!MY_ID){ MY_ID = "p" + Date.now().toString(36) + rand(1e6).toString(36); sessionStorage.setItem("spyfall_id", MY_ID); }
+
+/* ══════════════════ Firebase 초기화 ══════════════════ */
+let db=null, dbOK=false;
+try{
+  if(isConfigured()){ firebase.initializeApp(FIREBASE_CONFIG); db=firebase.database(); dbOK=true; }
+}catch(e){ console.error(e); }
+
+const GAME_SECONDS = 8*60;
+
+/* ══════════════════ 상태 ══════════════════ */
+let roomCode=null, myName=null, roomRef=null, roomData=null, roomListener=null, timerInt=null;
+
+/* ══════════════════ 장소 목록 채우기 ══════════════════ */
+(function fillPlaces(){
+  const g=$("#place-grid");
+  LOCATIONS.forEach(l=>{ const s=document.createElement("span"); s.textContent=l.emoji+" "+l.name; g.appendChild(s); });
+})();
+
+/* ══════════════════ HOME ══════════════════ */
+function checkDbStatus(){
+  const el=$("#db-status");
+  if(!dbOK){
+    el.innerHTML='⚠️ Firebase 설정이 필요해요. 파일 상단 <b>FIREBASE_CONFIG</b>에 값을 넣어주세요.';
+    el.style.color="var(--amber)";
+    $("#btn-create").disabled=true; $("#btn-join").disabled=true;
+  }else{
+    el.textContent="● 온라인"; el.style.color="var(--lime)";
+  }
+}
+checkDbStatus();
+
+function getName(){
+  const n=$("#in-name").value.trim();
+  if(!n){ toast("이름을 입력해주세요"); $("#in-name").focus(); return null; }
+  return n;
+}
+function makeCode(){ return String(1000+rand(9000)); }
+
+$("#btn-create").onclick = async ()=>{
+  const n=getName(); if(!n) return;
+  myName=n;
+  let code, exists=true, tries=0;
+  while(exists && tries<20){
+    code=makeCode();
+    const snap=await db.ref("rooms/"+code).get();
+    exists=snap.exists(); tries++;
+  }
+  const ref=db.ref("rooms/"+code);
+  await ref.set({
+    host: MY_ID,
+    state: "lobby",
+    spyCount: 1,
+    players: { [MY_ID]: { name:n, joined:firebase.database.ServerValue.TIMESTAMP } }
+  });
+  enterRoom(code, n);
+};
+
+$("#btn-join").onclick = async ()=>{
+  const n=getName(); if(!n) return;
+  const code=$("#in-code").value.trim();
+  if(!/^\d{4}$/.test(code)){ toast("4자리 방 코드를 입력하세요"); return; }
+  const snap=await db.ref("rooms/"+code).get();
+  if(!snap.exists()){ toast("존재하지 않는 방이에요"); return; }
+  myName=n;
+  await db.ref(`rooms/${code}/players/${MY_ID}`).set({ name:n, joined:firebase.database.ServerValue.TIMESTAMP });
+  enterRoom(code, n);
+};
+
+/* ══════════════════ 방 입장 / 구독 ══════════════════ */
+function enterRoom(code, name){
+  roomCode=code; myName=name;
+  roomRef=db.ref("rooms/"+code);
+  // 연결 끊기면 자동 퇴장
+  roomRef.child("players/"+MY_ID).onDisconnect().remove();
+  $("#lobby-code").textContent=code;
+  if(roomListener) roomRef.off("value", roomListener);
+  roomListener = roomRef.on("value", snap=>{
+    roomData=snap.val();
+    if(!roomData){ // 방 사라짐
+      toast("방이 종료되었어요"); leaveRoom(); return;
+    }
+    render();
+  });
+  show("lobby");
+}
+
+async function leaveRoom(){
+  stopTimer();
+  if(roomRef){
+    try{
+      roomRef.child("players/"+MY_ID).onDisconnect().cancel();
+      await roomRef.child("players/"+MY_ID).remove();
+      // 남은 사람 없으면 방 삭제
+      const snap=await roomRef.child("players").get();
+      if(!snap.exists()) await roomRef.remove();
+    }catch(e){}
+    if(roomListener) roomRef.off("value", roomListener);
+  }
+  roomRef=null; roomData=null; roomCode=null;
+  show("home");
+}
+
+/* ══════════════════ 렌더 ══════════════════ */
+function amHost(){ return roomData && roomData.host===MY_ID; }
+function playersArr(){
+  const p=roomData&&roomData.players?roomData.players:{};
+  return Object.keys(p).map(id=>({id, ...p[id]})).sort((a,b)=>(a.joined||0)-(b.joined||0));
+}
+
+function render(){
+  if(!roomData) return;
+
+  // 호스트 이탈 시 자동 승계 (가장 먼저 들어온 사람)
+  const ps=playersArr();
+  if(ps.length && !ps.some(p=>p.id===roomData.host)){
+    if(ps[0].id===MY_ID) roomRef.child("host").set(MY_ID);
+  }
+
+  const state=roomData.state;
+  if(state==="lobby") renderLobby(ps);
+  else if(state==="playing") renderGame(ps);
+  else if(state==="ended") renderReveal(ps);
+}
+
+function renderLobby(ps){
+  show("lobby");
+  const ul=$("#player-list"); ul.innerHTML="";
+  ps.forEach(p=>{
+    const li=document.createElement("li");
+    li.innerHTML=`<span class="dot"></span><span>${escapeHtml(p.name)}</span>`;
+    const tags=[];
+    if(p.id===roomData.host) tags.push('<span class="tag">HOST</span>');
+    if(p.id===MY_ID) tags.push('<span class="tag you">나</span>');
+    li.innerHTML+=tags.join("");
+    ul.appendChild(li);
+  });
+  $("#player-count").textContent=`참가자 ${ps.length}명`;
+
+  const host=amHost();
+  $("#host-controls").classList.toggle("hide",!host);
+  $("#guest-wait").classList.toggle("hide",host);
+  if(host){
+    $("#spy-n").textContent=roomData.spyCount||1;
+    const enough=ps.length>=3;
+    const maxSpy=Math.max(1,Math.floor((ps.length-1)/2)); // 스파이는 과반 미만
+    $("#btn-start").disabled=!enough;
+    $("#start-hint").textContent = enough
+      ? `${ps.length}명 · 스파이 ${roomData.spyCount||1}명으로 시작합니다.`
+      : `최소 3명이 모이면 시작할 수 있어요. (현재 ${ps.length}명)`;
+    $("#spy-plus").disabled=(roomData.spyCount||1)>=maxSpy;
+    $("#spy-minus").disabled=(roomData.spyCount||1)<=1;
+  }
+}
+
+function renderGame(ps){
+  show("game");
+  const round=roomData.round;
+  if(!round) return;
+  const me=round.assign && round.assign[MY_ID];
+  const card=$("#game-card");
+  card.classList.remove("spy");
+  if(!me){ // 게임 시작 후 들어온 관전자
+    card.innerHTML=`<div class="role-lbl">관전 중</div><div class="place" style="color:var(--dim)">다음 라운드에 참여할 수 있어요</div>`;
+  }else if(me.spy){
+    card.classList.add("spy");
+    card.innerHTML=`<div class="emoji">🕵️</div><div class="big">당신은 스파이</div>
+      <div class="sub">다른 사람들의 대화를 듣고 <b>장소를 알아내세요.</b><br>정체를 들키지 않는 것이 관건!</div>`;
+  }else{
+    const loc=LOCATIONS.find(l=>l.name===round.location);
+    card.innerHTML=`<div class="emoji">${loc?loc.emoji:"📍"}</div>
+      <div class="role-lbl">장소</div><div class="place">${escapeHtml(round.location)}</div>
+      <div class="role-lbl" style="margin-top:14px">당신의 역할</div><div class="role">${escapeHtml(me.role)}</div>`;
+  }
+
+  const host=amHost();
+  $("#game-host-controls").classList.toggle("hide",!host);
+  startTimer(round.endsAt);
+}
+
+function renderReveal(ps){
+  show("reveal");
+  stopTimer();
+  const r=roomData.round||{};
+  const spyNames=(r.spyIds||[]).map(id=>{
+    const p=(roomData.players||{})[id]; return p?p.name:"(퇴장)";
+  });
+  $("#reveal-spy").textContent = spyNames.length? spyNames.join(", ") : "—";
+  const loc=LOCATIONS.find(l=>l.name===r.location);
+  $("#reveal-place").textContent=`📍 장소: ${(loc?loc.emoji+" ":"")}${r.location||"—"}`;
+  const host=amHost();
+  $("#reveal-host-controls").classList.toggle("hide",!host);
+  $("#reveal-guest-wait").classList.toggle("hide",host);
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* ══════════════════ 타이머 ══════════════════ */
+function startTimer(endsAt){
+  stopTimer();
+  const el=$("#timer");
+  function tick(){
+    let left=Math.max(0,Math.round((endsAt-Date.now())/1000));
+    el.textContent=pad(Math.floor(left/60))+":"+pad(left%60);
+    el.classList.toggle("low", left<=30);
+    if(left<=0){ stopTimer(); }
+  }
+  tick(); timerInt=setInterval(tick,250);
+}
+function stopTimer(){ if(timerInt){ clearInterval(timerInt); timerInt=null; } }
+
+/* ══════════════════ 호스트: 게임 시작 ══════════════════ */
+$("#btn-start").onclick = async ()=>{
+  if(!amHost()) return;
+  const ps=playersArr();
+  if(ps.length<3){ toast("최소 3명이 필요해요"); return; }
+  const spyCount=Math.min(roomData.spyCount||1, Math.max(1,Math.floor((ps.length-1)/2)));
+  const loc=LOCATIONS[rand(LOCATIONS.length)];
+  const ids=shuffle(ps.map(p=>p.id));
+  const spyIds=ids.slice(0,spyCount);
+  const rolesPool=shuffle(loc.roles);
+  const assign={}; let ri=0;
+  ids.forEach(id=>{
+    if(spyIds.includes(id)) assign[id]={spy:true};
+    else { assign[id]={spy:false, role:rolesPool[ri%rolesPool.length]}; ri++; }
+  });
+  await roomRef.update({
+    state:"playing",
+    round:{ location:loc.name, spyIds, assign, endsAt: Date.now()+GAME_SECONDS*1000 }
+  });
+};
+
+/* 스파이 인원 조절 */
+$("#spy-plus").onclick =()=>{ if(!amHost())return; const ps=playersArr(); const mx=Math.max(1,Math.floor((ps.length-1)/2)); roomRef.child("spyCount").set(Math.min((roomData.spyCount||1)+1,mx)); };
+$("#spy-minus").onclick=()=>{ if(!amHost())return; roomRef.child("spyCount").set(Math.max((roomData.spyCount||1)-1,1)); };
+
+/* 정답 공개 / 다시 / 로비 */
+$("#btn-reveal").onclick   =()=>{ if(amHost()) roomRef.child("state").set("ended"); };
+$("#btn-again").onclick    =()=>{ $("#btn-start").click(); };
+$("#btn-back-lobby").onclick=()=>{ if(amHost()){ roomRef.update({state:"lobby", round:null}); } else { show("lobby"); } };
+
+/* 나가기 */
+$("#btn-leave").onclick=leaveRoom;
+$("#btn-reveal-leave").onclick=leaveRoom;
+
+/* 코드 복사 */
+$("#btn-copy").onclick=async()=>{
+  try{ await navigator.clipboard.writeText(roomCode); toast("방 코드 복사됨: "+roomCode); }
+  catch(e){ toast("코드: "+roomCode); }
+};
+
+/* 코드 입력 숫자만 */
+$("#in-code").addEventListener("input",e=>{ e.target.value=e.target.value.replace(/\D/g,"").slice(0,4); });
+
+/* 브라우저 닫을 때 정리 */
+window.addEventListener("beforeunload",()=>{ if(roomRef){ roomRef.child("players/"+MY_ID).remove(); } });
+</script>
+</body>
+</html>
